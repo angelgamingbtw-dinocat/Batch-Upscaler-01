@@ -2,7 +2,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Batch Upscaler PS99 / PSX</title>
+<title>Batch Upscaler PS99 / PSX with Controls</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
@@ -58,7 +58,7 @@
       0 4px 15px rgba(0, 0, 0, 0.25),
       0 10px 40px rgba(118, 75, 162, 0.4);
     text-align: center;
-    width: 440px;
+    width: 520px;
     color: #ddd;
     display: flex;
     flex-direction: column;
@@ -72,7 +72,7 @@
     border-radius: 14px;
     transition: border-color 0.3s ease;
     width: 100%;
-    max-width: 380px;
+    max-width: 480px;
     margin: 0 auto 25px;
     display: block;
     color: #ccc;
@@ -116,6 +116,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    margin-top: 15px;
   }
   button {
     background: linear-gradient(135deg, #764ba2, #667eea);
@@ -129,7 +130,7 @@
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
     transition: all 0.3s ease;
     width: 100%;
-    max-width: 380px;
+    max-width: 480px;
   }
   button:hover:not(:disabled) {
     background: linear-gradient(135deg, #5a3e99, #4a3290);
@@ -153,6 +154,83 @@
     font-weight: 600;
     user-select: none;
   }
+
+  /* Slider container */
+  .controls {
+    background: #292949;
+    border-radius: 14px;
+    padding: 18px 25px;
+    margin-bottom: 20px;
+    box-shadow: inset 0 0 15px #4b3b82;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .control-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #e0e0ff;
+    user-select: none;
+    flex: 1 1 130px;
+  }
+  input[type="range"] {
+    width: 65%;
+    cursor: pointer;
+    -webkit-appearance: none;
+    height: 8px;
+    border-radius: 6px;
+    background: #6b5b95;
+    outline: none;
+    transition: background-color 0.2s ease;
+  }
+  input[type="range"]:hover {
+    background: #a084ca;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    background: #f0e130;
+    cursor: pointer;
+    border-radius: 50%;
+    border: 2px solid #333;
+    transition: background-color 0.3s ease;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover {
+    background: #ddd820;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    background: #f0e130;
+    cursor: pointer;
+    border-radius: 50%;
+    border: 2px solid #333;
+  }
+  input[type="number"] {
+    width: 60px;
+    background: #3e3e6e;
+    border: none;
+    border-radius: 8px;
+    color: #eee;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 4px 8px;
+    margin-left: 15px;
+    box-shadow: inset 0 0 6px #6666cc;
+    transition: box-shadow 0.3s ease;
+    user-select: text;
+  }
+  input[type="number"]:focus {
+    outline: none;
+    box-shadow: 0 0 12px #f0e130;
+    color: #fff;
+  }
 </style>
 </head>
 <body>
@@ -166,7 +244,25 @@
 
 <div class="container">
   <input type="file" id="uploadBatch" accept="image/*" multiple />
-  
+
+  <div class="controls" id="controlsContainer">
+    <div class="control-group">
+      <label for="sliderX">X Offset:</label>
+      <input type="range" id="sliderX" min="-250" max="0" step="0.1" value="-88" />
+      <input type="number" id="inputX" min="-250" max="0" step="0.1" value="-88" />
+    </div>
+    <div class="control-group">
+      <label for="sliderY">Y Offset:</label>
+      <input type="range" id="sliderY" min="-250" max="0" step="0.1" value="-91" />
+      <input type="number" id="inputY" min="-250" max="0" step="0.1" value="-91" />
+    </div>
+    <div class="control-group">
+      <label for="sliderSize">Size (width & height):</label>
+      <input type="range" id="sliderSize" min="250" max="600" step="0.1" value="353" />
+      <input type="number" id="inputSize" min="250" max="600" step="0.1" value="353" />
+    </div>
+  </div>
+
   <div id="previewContainer"></div>
 
   <div class="buttons">
@@ -174,7 +270,7 @@
     <button id="downloadIndividualBtn" disabled>Download Individually</button>
     <button id="downloadZipBtn" disabled>Download as ZIP</button>
   </div>
-  <div id="version">Version 9</div>
+  <div id="version">Version 11</div>
 </div>
 
 <div id="footer">Made by @Versefy</div>
@@ -189,10 +285,22 @@
   const btnPS99 = document.getElementById('btnPS99');
   const btnPSX = document.getElementById('btnPSX');
 
-  let batchImages = []; // {img: Image, canvas, isUpscaled, filename}
-  let currentMode = 'PS99'; // default mode
+  const sliderX = document.getElementById('sliderX');
+  const sliderY = document.getElementById('sliderY');
+  const sliderSize = document.getElementById('sliderSize');
 
-  // Clear previews and reset
+  const inputX = document.getElementById('inputX');
+  const inputY = document.getElementById('inputY');
+  const inputSize = document.getElementById('inputSize');
+
+  let batchImages = [];
+  let currentMode = 'PS99';
+
+  const defaultSettings = {
+    PS99: { x: -88, y: -91, size: 353, borderWidth: 8 },
+    PSX: { x: -150, y: -98.8, size: 411.5, borderWidth: 9 }
+  };
+
   function clearPreviews() {
     previewContainer.innerHTML = '';
     batchImages = [];
@@ -201,7 +309,6 @@
     downloadZipBtn.disabled = true;
   }
 
-  // Load images from input
   uploadBatch.addEventListener('change', e => {
     const files = e.target.files;
     clearPreviews();
@@ -215,8 +322,8 @@
           canvas.width = 250;
           canvas.height = 250;
           const ctx = canvas.getContext('2d');
-          ctx.clearRect(0,0,250,250);
-          ctx.drawImage(img, 0, 0, 250, 250);
+          ctx.clearRect(0, 0, 420, 420);
+          ctx.drawImage(img, 0, 0, 420, 420);
           previewContainer.appendChild(canvas);
           batchImages.push({ img, canvas, isUpscaled: false, filename: file.name });
           upscaleAllBtn.disabled = false;
@@ -229,33 +336,57 @@
     });
   });
 
+  // Sync slider and number input
+  function syncSliderAndInput(slider, input) {
+    slider.addEventListener('input', () => {
+      input.value = slider.value;
+      onControlChange();
+    });
+    input.addEventListener('input', () => {
+      let val = parseFloat(input.value);
+      if (isNaN(val)) return;
+      // Clamp values to slider min/max
+      val = Math.min(Math.max(val, parseFloat(slider.min)), parseFloat(slider.max));
+      input.value = val;
+      slider.value = val;
+      onControlChange();
+    });
+  }
+  syncSliderAndInput(sliderX, inputX);
+  syncSliderAndInput(sliderY, inputY);
+  syncSliderAndInput(sliderSize, inputSize);
+
+  function onControlChange() {
+    batchImages.forEach(item => {
+      if (item.isUpscaled) {
+        upscaleImage(item);
+      }
+    });
+  }
+
   // Draw upscale + border on a canvas item
   function upscaleImage(item) {
-    const {img, canvas} = item;
+    const { img, canvas } = item;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, 250, 250);
 
-    if(currentMode === 'PS99') {
-      // PS99: fixed offsets
-      ctx.drawImage(img, -88, -91, 353, 353);
-      ctx.lineWidth = 8;
-    } else {
-      // PSX: fixed offsets and size
-      ctx.drawImage(img, -150, -98.8, 411.5, 411.5);
-      ctx.lineWidth = 9;
-    }
+    const x = parseFloat(sliderX.value);
+    const y = parseFloat(sliderY.value);
+    const size = parseFloat(sliderSize.value);
+    const borderWidth = currentMode === 'PS99' ? 8 : 9;
 
+    ctx.drawImage(img, x, y, size, size);
+    ctx.lineWidth = borderWidth;
     ctx.strokeStyle = 'black';
-    ctx.strokeRect(4, 4, 242, 242);
+    ctx.strokeRect(borderWidth / 2, borderWidth / 2, 420 - borderWidth, 420 - borderWidth);
   }
 
-  // Upscale all images
-  upscaleAllBtn.addEventListener('click', () => {
+  function upscaleAll() {
     batchImages.forEach(item => {
       upscaleImage(item);
       item.isUpscaled = true;
     });
-  });
+  }
 
   // Download helper
   function triggerDownload(dataUrl, filename) {
@@ -267,26 +398,25 @@
     document.body.removeChild(link);
   }
 
-  // Download individually all
   async function downloadIndividual() {
-    for (const {img, isUpscaled, filename} of batchImages) {
+    for (const { img, isUpscaled, filename } of batchImages) {
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = 250;
       exportCanvas.height = 250;
       const exportCtx = exportCanvas.getContext('2d');
 
-      if(isUpscaled){
-        if(currentMode === 'PS99') {
-          exportCtx.drawImage(img, -88, -91, 353, 353);
-          exportCtx.lineWidth = 8;
-        } else {
-          exportCtx.drawImage(img, -150, -98.8, 411.5, 411.5);
-          exportCtx.lineWidth = 9;
-        }
+      if (isUpscaled) {
+        const x = parseFloat(sliderX.value);
+        const y = parseFloat(sliderY.value);
+        const size = parseFloat(sliderSize.value);
+        const borderWidth = currentMode === 'PS99' ? 8 : 9;
+
+        exportCtx.drawImage(img, x, y, size, size);
+        exportCtx.lineWidth = borderWidth;
         exportCtx.strokeStyle = 'black';
-        exportCtx.strokeRect(4, 4, 242, 242);
+        exportCtx.strokeRect(borderWidth / 2, borderWidth / 2, 420 - borderWidth, 420 - borderWidth);
       } else {
-        exportCtx.drawImage(img, 0, 0, 250, 250);
+        exportCtx.drawImage(img, 0, 0, 420, 420);
       }
 
       const dataUrl = exportCanvas.toDataURL('image/png');
@@ -299,98 +429,106 @@
         saveName += '-upscaled.png';
       }
       triggerDownload(dataUrl, saveName);
-      await new Promise(r => setTimeout(r, 300));
+      // Small delay so downloads don't clash
+      await new Promise((r) => setTimeout(r, 400));
     }
   }
 
-  // Download ZIP of all
   async function downloadZip() {
-    if(batchImages.length === 0) return;
+    if (batchImages.length === 0) return;
     const zip = new JSZip();
 
-    batchImages.forEach(({img, isUpscaled, filename}) => {
+    batchImages.forEach(({ img, isUpscaled, filename }) => {
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = 250;
       exportCanvas.height = 250;
       const exportCtx = exportCanvas.getContext('2d');
 
-      if(isUpscaled){
-        if(currentMode === 'PS99') {
-          exportCtx.drawImage(img, -88, -91, 353, 353);
-          exportCtx.lineWidth = 8;
-        } else {
-          exportCtx.drawImage(img, -150, -98.8, 411.5, 411.5);
-          exportCtx.lineWidth = 9;
-        }
+      if (isUpscaled) {
+        const x = parseFloat(sliderX.value);
+        const y = parseFloat(sliderY.value);
+        const size = parseFloat(sliderSize.value);
+        const borderWidth = currentMode === 'PS99' ? 8 : 9;
+
+        exportCtx.drawImage(img, x, y, size, size);
+        exportCtx.lineWidth = borderWidth;
         exportCtx.strokeStyle = 'black';
-        exportCtx.strokeRect(4, 4, 242, 242);
+        exportCtx.strokeRect(borderWidth / 2, borderWidth / 2, 250 - borderWidth, 250 - borderWidth);
       } else {
-        exportCtx.drawImage(img, 0, 0, 250, 250);
+        exportCtx.drawImage(img, 0, 0, 420, 420);
       }
       const dataUrl = exportCanvas.toDataURL('image/png');
       const base64 = dataUrl.split(',')[1];
       let fileName = filename;
-      if(fileName.includes('.')){
+      if (fileName.includes('.')) {
         const parts = fileName.split('.');
-        parts[parts.length-2] += '-upscaled';
+        parts[parts.length - 2] += '-upscaled';
         fileName = parts.join('.');
       } else {
         fileName += '-upscaled.png';
       }
-      zip.file(fileName, base64, {base64:true});
+      zip.file(fileName, base64, { base64: true });
     });
 
-    const content = await zip.generateAsync({type:"blob"});
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(content);
-    link.download = "upscaled_images.zip";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+    const content = await zip.generateAsync({ type: 'blob' });
+    const zipLink = document.createElement('a');
+    zipLink.href = URL.createObjectURL(content);
+    zipLink.download = 'upscaled_images.zip';
+    document.body.appendChild(zipLink);
+    zipLink.click();
+    document.body.removeChild(zipLink);
   }
 
-  // Change mode between PS99 and PSX
+  // Mode switching updates slider defaults
   function setActiveMode(mode) {
     currentMode = mode;
-    if(mode === 'PS99') {
-      btnPS99.classList.add('active');
-      btnPSX.classList.remove('active');
-      // Reset previews to unscaled for PS99 mode
-      batchImages.forEach(({img, canvas}) => {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, 250, 250);
-        ctx.drawImage(img, 0, 0, 250, 250);
-      });
-      batchImages.forEach(item => item.isUpscaled = false);
+    btnPS99.classList.toggle('active', mode === 'PS99');
+    btnPSX.classList.toggle('active', mode === 'PSX');
+
+    if (mode === 'PS99') {
+      sliderX.min = -250; sliderX.max = 0; sliderX.step = 0.1;
+      sliderY.min = -250; sliderY.max = 0; sliderY.step = 0.1;
+      sliderSize.min = 250; sliderSize.max = 600; sliderSize.step = 0.1;
+
+      sliderX.value = defaultSettings.PS99.x;
+      sliderY.value = defaultSettings.PS99.y;
+      sliderSize.value = defaultSettings.PS99.size;
+
+      inputX.value = defaultSettings.PS99.x;
+      inputY.value = defaultSettings.PS99.y;
+      inputSize.value = defaultSettings.PS99.size;
     } else {
-      btnPS99.classList.remove('active');
-      btnPSX.classList.add('active');
-      // Reset previews to unscaled for PSX mode
-      batchImages.forEach(({img, canvas}) => {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, 250, 250);
-        ctx.drawImage(img, 0, 0, 250, 250);
-      });
-      batchImages.forEach(item => item.isUpscaled = false);
+      sliderX.min = -250; sliderX.max = 0; sliderX.step = 0.1;
+      sliderY.min = -250; sliderY.max = 0; sliderY.step = 0.1;
+      sliderSize.min = 250; sliderSize.max = 600; sliderSize.step = 0.1;
+
+      sliderX.value = defaultSettings.PSX.x;
+      sliderY.value = defaultSettings.PSX.y;
+      sliderSize.value = defaultSettings.PSX.size;
+
+      inputX.value = defaultSettings.PSX.x;
+      inputY.value = defaultSettings.PSX.y;
+      inputSize.value = defaultSettings.PSX.size;
     }
+
+    // Re-upscale all images with new settings if upscaled already
+    batchImages.forEach(item => {
+      if (item.isUpscaled) {
+        upscaleImage(item);
+      }
+    });
   }
 
+  // Event listeners for buttons
   btnPS99.addEventListener('click', () => setActiveMode('PS99'));
   btnPSX.addEventListener('click', () => setActiveMode('PSX'));
-
-  upscaleAllBtn.addEventListener('click', () => {
-    batchImages.forEach(item => {
-      upscaleImage(item);
-      item.isUpscaled = true;
-    });
-  });
-
+  upscaleAllBtn.addEventListener('click', upscaleAll);
   downloadIndividualBtn.addEventListener('click', downloadIndividual);
   downloadZipBtn.addEventListener('click', downloadZip);
-</script>
 
-<div id="footer">Made by @Versefy</div>
+  // Initialize mode & controls
+  setActiveMode('PS99');
+</script>
 
 </body>
 </html>
