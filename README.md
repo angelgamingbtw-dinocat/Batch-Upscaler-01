@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -30,7 +29,7 @@
   .mode-toggle {
     display: flex;
     gap: 16px;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
   }
   .mode-btn {
     cursor: pointer;
@@ -59,7 +58,7 @@
       0 4px 15px rgba(0, 0, 0, 0.25),
       0 10px 40px rgba(118, 75, 162, 0.4);
     text-align: center;
-    width: 420px;
+    width: 440px;
     color: #ddd;
     display: flex;
     flex-direction: column;
@@ -167,6 +166,7 @@
 
 <div class="container">
   <input type="file" id="uploadBatch" accept="image/*" multiple />
+  
   <div id="previewContainer"></div>
 
   <div class="buttons">
@@ -174,7 +174,7 @@
     <button id="downloadIndividualBtn" disabled>Download Individually</button>
     <button id="downloadZipBtn" disabled>Download as ZIP</button>
   </div>
-  <div id="version">Version 7</div>
+  <div id="version">Version 9</div>
 </div>
 
 <div id="footer">Made by @Versefy</div>
@@ -192,6 +192,7 @@
   let batchImages = []; // {img: Image, canvas, isUpscaled, filename}
   let currentMode = 'PS99'; // default mode
 
+  // Clear previews and reset
   function clearPreviews() {
     previewContainer.innerHTML = '';
     batchImages = [];
@@ -200,6 +201,7 @@
     downloadZipBtn.disabled = true;
   }
 
+  // Load images from input
   uploadBatch.addEventListener('change', e => {
     const files = e.target.files;
     clearPreviews();
@@ -227,26 +229,27 @@
     });
   });
 
+  // Draw upscale + border on a canvas item
   function upscaleImage(item) {
     const {img, canvas} = item;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, 250, 250);
 
     if(currentMode === 'PS99') {
-      // PS99: X=-88, Y=-91, size 353x353, border 8px
+      // PS99: fixed offsets
       ctx.drawImage(img, -88, -91, 353, 353);
       ctx.lineWidth = 8;
     } else {
-      // PSX: X=-53, Y=-96, size 411.5x411.5, border 9px
-      ctx.drawImage(img, -53, -96, 411.5, 411.5);
+      // PSX: fixed offsets and size
+      ctx.drawImage(img, -150, -98.8, 411.5, 411.5);
       ctx.lineWidth = 9;
     }
 
     ctx.strokeStyle = 'black';
-    // border is inside 250x250 canvas, offset 4px, size 242px square
     ctx.strokeRect(4, 4, 242, 242);
   }
 
+  // Upscale all images
   upscaleAllBtn.addEventListener('click', () => {
     batchImages.forEach(item => {
       upscaleImage(item);
@@ -254,7 +257,7 @@
     });
   });
 
-  // Helper: triggers download of a data URL with a filename
+  // Download helper
   function triggerDownload(dataUrl, filename) {
     const link = document.createElement('a');
     link.href = dataUrl;
@@ -264,6 +267,7 @@
     document.body.removeChild(link);
   }
 
+  // Download individually all
   async function downloadIndividual() {
     for (const {img, isUpscaled, filename} of batchImages) {
       const exportCanvas = document.createElement('canvas');
@@ -276,7 +280,7 @@
           exportCtx.drawImage(img, -88, -91, 353, 353);
           exportCtx.lineWidth = 8;
         } else {
-          exportCtx.drawImage(img, -53, -96, 411.5, 411.5);
+          exportCtx.drawImage(img, -150, -98.8, 411.5, 411.5);
           exportCtx.lineWidth = 9;
         }
         exportCtx.strokeStyle = 'black';
@@ -286,7 +290,6 @@
       }
 
       const dataUrl = exportCanvas.toDataURL('image/png');
-      // Fix filename with -upscaled suffix before extension
       let saveName = filename;
       if (saveName.includes('.')) {
         const parts = saveName.split('.');
@@ -296,11 +299,11 @@
         saveName += '-upscaled.png';
       }
       triggerDownload(dataUrl, saveName);
-      // Wait 300ms before next download to avoid browser blocking
       await new Promise(r => setTimeout(r, 300));
     }
   }
 
+  // Download ZIP of all
   async function downloadZip() {
     if(batchImages.length === 0) return;
     const zip = new JSZip();
@@ -316,7 +319,7 @@
           exportCtx.drawImage(img, -88, -91, 353, 353);
           exportCtx.lineWidth = 8;
         } else {
-          exportCtx.drawImage(img, -53, -96, 411.5, 411.5);
+          exportCtx.drawImage(img, -150, -98.8, 411.5, 411.5);
           exportCtx.lineWidth = 9;
         }
         exportCtx.strokeStyle = 'black';
@@ -347,33 +350,47 @@
     URL.revokeObjectURL(link.href);
   }
 
+  // Change mode between PS99 and PSX
   function setActiveMode(mode) {
     currentMode = mode;
     if(mode === 'PS99') {
       btnPS99.classList.add('active');
       btnPSX.classList.remove('active');
+      // Reset previews to unscaled for PS99 mode
+      batchImages.forEach(({img, canvas}) => {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 250, 250);
+        ctx.drawImage(img, 0, 0, 250, 250);
+      });
+      batchImages.forEach(item => item.isUpscaled = false);
     } else {
       btnPS99.classList.remove('active');
       btnPSX.classList.add('active');
+      // Reset previews to unscaled for PSX mode
+      batchImages.forEach(({img, canvas}) => {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 250, 250);
+        ctx.drawImage(img, 0, 0, 250, 250);
+      });
+      batchImages.forEach(item => item.isUpscaled = false);
     }
-    // Reset upscale state and redraw previews unscaled:
-    batchImages.forEach(({img, canvas}) => {
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, 250, 250);
-      ctx.drawImage(img, 0, 0, 250, 250);
-    });
-    batchImages.forEach(item => item.isUpscaled = false);
-    upscaleAllBtn.disabled = batchImages.length === 0;
-    downloadIndividualBtn.disabled = batchImages.length === 0;
-    downloadZipBtn.disabled = batchImages.length === 0;
   }
 
   btnPS99.addEventListener('click', () => setActiveMode('PS99'));
   btnPSX.addEventListener('click', () => setActiveMode('PSX'));
+
+  upscaleAllBtn.addEventListener('click', () => {
+    batchImages.forEach(item => {
+      upscaleImage(item);
+      item.isUpscaled = true;
+    });
+  });
+
   downloadIndividualBtn.addEventListener('click', downloadIndividual);
   downloadZipBtn.addEventListener('click', downloadZip);
-
 </script>
+
+<div id="footer">Made by @Versefy</div>
 
 </body>
 </html>
