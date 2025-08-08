@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -117,7 +118,7 @@
     flex-direction: column;
     gap: 12px;
   }
-  button, select {
+  button {
     background: linear-gradient(135deg, #764ba2, #667eea);
     color: #fff;
     border: none;
@@ -131,7 +132,7 @@
     width: 100%;
     max-width: 380px;
   }
-  button:hover:not(:disabled), select:hover {
+  button:hover:not(:disabled) {
     background: linear-gradient(135deg, #5a3e99, #4a3290);
     box-shadow: 0 12px 30px rgba(74, 50, 144, 0.8);
   }
@@ -242,6 +243,7 @@
     }
 
     ctx.strokeStyle = 'black';
+    // border is inside 250x250 canvas, offset 4px, size 242px square
     ctx.strokeRect(4, 4, 242, 242);
   }
 
@@ -251,6 +253,16 @@
       item.isUpscaled = true;
     });
   });
+
+  // Helper: triggers download of a data URL with a filename
+  function triggerDownload(dataUrl, filename) {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   async function downloadIndividual() {
     for (const {img, isUpscaled, filename} of batchImages) {
@@ -274,11 +286,18 @@
       }
 
       const dataUrl = exportCanvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = filename.includes('.') ? filename.replace(/\.(?=[^.]+$)/, '-upscaled.') : filename + '-upscaled.png';
-      link.href = dataUrl;
-      link.click();
-      await new Promise(r => setTimeout(r, 250)); // slight delay so browser can process downloads
+      // Fix filename with -upscaled suffix before extension
+      let saveName = filename;
+      if (saveName.includes('.')) {
+        const parts = saveName.split('.');
+        parts[parts.length - 2] += '-upscaled';
+        saveName = parts.join('.');
+      } else {
+        saveName += '-upscaled.png';
+      }
+      triggerDownload(dataUrl, saveName);
+      // Wait 300ms before next download to avoid browser blocking
+      await new Promise(r => setTimeout(r, 300));
     }
   }
 
@@ -322,7 +341,9 @@
     const link = document.createElement('a');
     link.href = URL.createObjectURL(content);
     link.download = "upscaled_images.zip";
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
   }
 
@@ -349,6 +370,9 @@
 
   btnPS99.addEventListener('click', () => setActiveMode('PS99'));
   btnPSX.addEventListener('click', () => setActiveMode('PSX'));
+  downloadIndividualBtn.addEventListener('click', downloadIndividual);
+  downloadZipBtn.addEventListener('click', downloadZip);
+
 </script>
 
 </body>
